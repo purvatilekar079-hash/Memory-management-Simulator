@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Management Simulator</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    margin: 0;
+    padding: 20px;
+    color: #1e293b;
+}
+
+.container {
+    max-width: 700px;
+    margin: auto;
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 4px 15px #cbd5e1;
+}
+
+h1 {
+    text-align: center;
+    color: #1d4ed8;
+    font-size: 26px;
+}
+
+.description {
+    text-align: center;
+    color: #64748b;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.card {
+    background: #eff6ff;
+    padding: 14px 5px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.card h3 {
+    font-size: 13px;
+    margin: 0 0 10px;
+}
+
+.card p {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0;
+}
+
+input, button {
+    width: 100%;
+    padding: 12px;
+    margin: 7px 0;
+    border-radius: 7px;
+    font-size: 15px;
+}
+
+input {
+    border: 1px solid #cbd5e1;
+}
+
+button {
+    border: none;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+.reset {
+    background: #64748b;
+}
+
+h2 {
+    font-size: 19px;
+    margin-top: 25px;
+}
+
+#memoryBlocks {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.block {
+    min-height: 80px;
+    padding: 10px 3px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+}
+
+.used {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+#message {
+    font-weight: bold;
+    margin-top: 12px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+th, td {
+    padding: 9px 4px;
+    border: 1px solid #cbd5e1;
+    text-align: center;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+th {
+    background: #dbeafe;
+}
+
+@media (max-width: 420px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 13px;
+    }
+
+    #memoryBlocks {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card p {
+        font-size: 17px;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Memory Management Simulator</h1>
+<p class="description">Operating System Mini Project</p>
+
+<div class="stats">
+    <div class="card">
+        <h3>Total Memory</h3>
+        <p>100 MB</p>
+    </div>
+    <div class="card">
+        <h3>Used Memory</h3>
+        <p id="used">0 MB</p>
+    </div>
+    <div class="card">
+        <h3>Free Memory</h3>
+        <p id="free">100 MB</p>
+    </div>
+</div>
+
+<h2>Allocate Memory</h2>
+
+<input id="processName" type="text"
+placeholder="Enter process name (e.g. P1)">
+
+<input id="memorySize" type="number"
+placeholder="Memory required in MB" min="1" max="100">
+
+<button onclick="allocateMemory()">Allocate Memory</button>
+<button class="reset" onclick="resetMemory()">Reset Simulator</button>
+
+<p id="message" role="status" aria-live="polite"></p>
+
+<h2>Memory Blocks</h2>
+<div id="memoryBlocks"></div>
+
+<h2>Running Processes</h2>
+
+<table>
+<thead>
+<tr>
+<th>Process</th>
+<th>Memory</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="processTable"></tbody>
+</table>
+
+</div>
+
+<script>
+const TOTAL_MEMORY = 100;
+let processes = [];
+
+function allocateMemory() {
+    const name = document.getElementById("processName").value.trim();
+    const size = Number(document.getElementById("memorySize").value);
+    const message = document.getElementById("message");
+
+    if (!name) {
+        message.textContent = "Please enter a process name.";
+        return;
+    }
+
+    if (processes.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        message.textContent = "This process name already exists.";
+        return;
+    }
+
+    if (!Number.isInteger(size) || size < 1) {
+        message.textContent = "Enter a valid memory size of at least 1 MB.";
+        return;
+    }
+
+    if (size > TOTAL_MEMORY - getUsedMemory()) {
+        message.textContent = "Error: Not enough free memory!";
+        return;
+    }
+
+    processes.push({ name, size });
+
+    document.getElementById("processName").value = "";
+    document.getElementById("memorySize").value = "";
+
+    message.textContent = "Memory allocated successfully!";
+    render();
+}
+
+function getUsedMemory() {
+    return processes.reduce((total, p) => total + p.size, 0);
+}
+
+function deallocateMemory(name) {
+    processes = processes.filter(p => p.name !== name);
+    document.getElementById("message").textContent =
+        "Process removed and memory released.";
+    render();
+}
+
+function resetMemory() {
+    processes = [];
+    document.getElementById("message").textContent =
+        "Simulator reset successfully.";
+    render();
+}
+
+function render() {
+    const used = getUsedMemory();
+
+    document.getElementById("used").textContent = used + " MB";
+    document.getElementById("free").textContent =
+        (TOTAL_MEMORY - used) + " MB";
+
+    const blocks = document.getElementById("memoryBlocks");
+    blocks.innerHTML = "";
+
+    processes.forEach(p => {
+        const block = document.createElement("div");
+        block.className = "block used";
+
+        const title = document.createElement("strong");
+        title.textContent = p.name;
+
+        const size = document.createElement("div");
+        size.textContent = p.size + " MB";
+
+        block.append(title, size);
+        blocks.appendChild(block);
+    });
+
+    const freeBlock = document.createElement("div");
+    freeBlock.className = "block";
+
+    const freeTitle = document.createElement("strong");
+    freeTitle.textContent = "Free Memory";
+
+    const freeSize = document.createElement("div");
+    freeSize.textContent = (TOTAL_MEMORY - used) + " MB";
+
+    freeBlock.append(freeTitle, freeSize);
+    blocks.appendChild(freeBlock);
+
+    const table = document.getElementById("processTable");
+    table.innerHTML = "";
+
+    processes.forEach(p => {
+        const row = table.insertRow();
+
+        const nameCell = row.insertCell();
+        nameCell.textContent = p.name;
+
+        const sizeCell = row.insertCell();
+        sizeCell.textContent = p.size + " MB";
+
+        const actionCell = row.insertCell();
+        const button = document.createElement("button");
+
+        button.textContent = "Release";
+        button.style.padding = "7px 3px";
+        button.onclick = () => deallocateMemory(p.name);
+
+        actionCell.appendChild(button);
+    });
+}
+
+render();
+</script>
+</body>
+</html>
